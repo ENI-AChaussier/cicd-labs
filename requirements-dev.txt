@@ -13,7 +13,7 @@ bandit>=1.7
 pip-audit>=2.7
 # IA / ML (Module 2)
 anthropic>=2
-scikit-learn>=1.5
+scikit-learn>=1.9.1
 numpy>=1.26
 pandas>=2.2
 pillow>=10
