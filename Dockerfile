@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.15-slim
 WORKDIR /app
 # Correctifs de sécurité Debian publiés depuis la construction de l'image de base (cf. Trivy, Atelier 11)
 RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
