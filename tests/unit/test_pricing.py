@@ -104,3 +104,21 @@ def test_panier_vide_sans_livraison():
 def test_produit_inconnu():
     with pytest.raises(KeyError):
         quote([{"product_id": "PRODUIT_INCONNU", "qty": 1}])
+
+
+########### ATELIER 1 - TDD #####################
+
+
+@pytest.mark.parametrize("items, resultat", [
+    # Cas 1 : remise de 15 % sans minimum
+    ([{"product_id": "sticker", "qty": 1}], Decimal("0.37")),
+    # Cas 2 : remise de 15 % sur une ligne sans remise volume
+    ([{"product_id": "sticker", "qty": 2}], Decimal("0.74")),
+    # Cas 3 : aucune remise STUDENT15 sur une ligne bénéficiant
+    # déjà de la remise volume
+    ([{"product_id": "sticker", "qty": 10}], Decimal("0.00")),
+])
+def test_coupon_student15(items, resultat):
+    result = quote(items, coupon="STUDENT15")
+    assert result.discount == resultat
+
