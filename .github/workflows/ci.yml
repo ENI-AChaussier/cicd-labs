@@ -47,5 +47,34 @@ jobs:
       - name: Installer les dépendances
         run: pip install -r requirements-dev.txt
 
-      - name: Lancer les tests en parallèle
-        run: pytest -m "unit or api" -n auto
+      - name: Créer le dossier des rapports
+        run: mkdir -p reports
+
+      - name: Lancer les tests avec couverture
+        run: |
+          pytest -m "unit or api" -n auto \
+            --cov \
+            --cov-report=xml \
+            --cov-report=html \
+            --cov-fail-under=80 \
+            --junitxml=reports/junit.xml
+
+      - name: Publier les rapports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapports-python-${{ matrix.python-version }}
+          path: |
+            reports/
+            htmlcov/
+            coverage.xml
+          if-no-files-found: warn
+
+      - name: Ajouter la couverture au résumé
+        if: always()
+        run: |
+          if [ -f coverage.xml ]; then
+            coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Aucun rapport de couverture disponible." >> "$GITHUB_STEP_SUMMARY"
+          fi
