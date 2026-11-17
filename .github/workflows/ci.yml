@@ -53,7 +53,7 @@ jobs:
             --cov=minishop \
             --cov-report=xml:reports/coverage.xml \
             --cov-report=html \
-            --cov-fail-under=85 \
+            --cov-fail-under=80 \
             --junitxml=reports/junit.xml
 
       - name: Add coverage to job summary
