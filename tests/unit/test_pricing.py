@@ -30,7 +30,18 @@ def test_quote_panier_vide():
 
 # TODO Atelier 1 :
 #  - remise volume à partir de 10 unités (et pas à 9 !)
+def test_ligne_total_avec_remise_partir_de_10():
+    """Une remise est appliqué à partir de 10 unités."""
+    assert line_total(Decimal("10"), 9 ) == Decimal("90")
+    assert line_total(Decimal("10"), 10 ) == Decimal("95")
+
+
 #  - quantités invalides (0, 100, -1, "2", True) -> ValueError   (astuce : @pytest.mark.parametrize)
+@pytest.mark.parametrize("qty", [0, -1, 100, "2", True])
+def test_quantite_invalide(qty):
+    with pytest.raises(ValueError):
+        line_total(Decimal("10"), qty)
 #  - coupons WELCOME10 / FIXED5 / FREESHIP (seuils inclus/exclus), coupon inconnu, casse
 #  - livraison offerte à partir de 50 € APRÈS remise
 #  - produit inconnu -> KeyError
+
