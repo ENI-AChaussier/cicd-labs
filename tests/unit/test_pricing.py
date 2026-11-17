@@ -10,7 +10,6 @@ import pytest
 from minishop.pricing import coupon_discount, line_total, money, quote, shipping_cost
 
 
-
 def test_money_arrondi_commercial():
     """0.125 s'arrondit à 0.13 (ROUND_HALF_UP), pas 0.12."""
     assert money("0.125") == Decimal("0.13")
