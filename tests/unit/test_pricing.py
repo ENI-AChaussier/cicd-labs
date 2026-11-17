@@ -5,11 +5,13 @@ Complétez ce fichier : objectif >= 90 % de couverture sur minishop/pricing.py.
 
 from decimal import Decimal
 from types import SimpleNamespace
+
 import pytest
 
 from minishop.pricing import line_total, money, quote
 
 pytestmark = pytest.mark.unit
+
 
 @pytest.fixture
 def fake_catalog(monkeypatch):
@@ -23,12 +25,10 @@ def fake_catalog(monkeypatch):
         "p55": SimpleNamespace(id="p55", price=Decimal("55.00")),
     }
 
-    monkeypatch.setattr(
-        "minishop.pricing.get_product",
-        lambda product_id: products[product_id]
-    )
+    monkeypatch.setattr("minishop.pricing.get_product", lambda product_id: products[product_id])
 
     return products
+
 
 def test_money_arrondi_commercial():
     """0.125 s'arrondit à 0.13 (ROUND_HALF_UP), pas 0.12."""
@@ -58,20 +58,18 @@ def test_quote_panier_vide():
         (9, "9.00"),
         (10, "9.50"),
         (11, "10.45"),
-    ]
+    ],
 )
 def test_remise_volume(qty, expected):
     result = line_total(Decimal("1.00"), qty)
     assert result == Decimal(expected)
 
 
-@pytest.mark.parametrize(
-    "qty",
-    [0, 100, -1, "2", True]
-)
+@pytest.mark.parametrize("qty", [0, 100, -1, "2", True])
 def test_quantites_invalides(qty):
     with pytest.raises(ValueError):
         line_total(Decimal("10.00"), qty)
+
 
 def test_welcome10(fake_catalog):
     q = quote([{"product_id": "p20", "qty": 1}], "WELCOME10")
@@ -98,7 +96,6 @@ def test_freeship(fake_catalog):
     assert q.shipping == Decimal("0.00")
 
 
-
 def test_coupon_inconnu(fake_catalog):
     with pytest.raises(ValueError):
         quote([{"product_id": "p20", "qty": 1}], "SUPER10")
@@ -112,7 +109,6 @@ def test_coupon_minuscule(fake_catalog):
 def test_coupon_avec_espaces(fake_catalog):
     q = quote([{"product_id": "p20", "qty": 1}], " WELCOME10 ")
     assert q.discount == Decimal("2.00")
-
 
 
 def test_livraison_payante(fake_catalog):
@@ -133,10 +129,9 @@ def test_livraison_apres_remise(fake_catalog):
     assert q.shipping == Decimal("4.90")
 
 
-
 def test_produit_inconnu(fake_catalog):
     with pytest.raises(KeyError):
-     quote([{"product_id": "inexistant", "qty": 1}])
+        quote([{"product_id": "inexistant", "qty": 1}])
 
 
 def test_quote_as_dict(fake_catalog):
@@ -153,17 +148,20 @@ def test_money_bug_arrondi(monkeypatch):
 
     assert money("0.125") == Decimal("0.12")
 
+
 def test_student15_sans_minimum(fake_catalog):
     q = quote([{"product_id": "p1", "qty": 1}], "STUDENT15")
 
     assert q.subtotal == Decimal("1.00")
     assert q.discount == Decimal("0.15")
 
+
 def test_student15_non_cumulable_remise_volume(fake_catalog):
     q = quote([{"product_id": "p1", "qty": 10}], "STUDENT15")
 
     assert q.subtotal == Decimal("9.50")
-    assert q.discount == Decimal("0.00")    
+    assert q.discount == Decimal("0.00")
+
 
 def test_student15_panier_mixte(fake_catalog):
     q = quote(
@@ -171,8 +169,8 @@ def test_student15_panier_mixte(fake_catalog):
             {"product_id": "p10", "qty": 1},
             {"product_id": "p1", "qty": 10},
         ],
-        "STUDENT15"
+        "STUDENT15",
     )
 
     assert q.subtotal == Decimal("19.50")
-    assert q.discount == Decimal("1.50")    
+    assert q.discount == Decimal("1.50")
