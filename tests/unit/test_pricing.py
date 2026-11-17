@@ -41,7 +41,16 @@ def test_ligne_total_avec_remise_partir_de_10():
 def test_quantite_invalide(qty):
     with pytest.raises(ValueError):
         line_total(Decimal("10"), qty)
+
 #  - coupons WELCOME10 / FIXED5 / FREESHIP (seuils inclus/exclus), coupon inconnu, casse
 #  - livraison offerte à partir de 50 € APRÈS remise
 #  - produit inconnu -> KeyError
 
+
+# Test volontaire du linter Ruff
+# Cette variable est déclarée mais jamais utilisée.
+# Ruff doit détecter l'erreur F841.
+
+def test_erreur_style():
+    prix = 10  # Variable inutilisée
+    assert True
