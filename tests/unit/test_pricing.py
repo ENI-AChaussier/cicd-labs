@@ -4,19 +4,18 @@ Complétez ce fichier : objectif >= 90 % de couverture sur minishop/pricing.py.
 """
 
 from decimal import Decimal
-import random
 
 import pytest
 
-from minishop.pricing import line_total, money, quote, coupon_discount, shipping_cost
+from minishop.pricing import coupon_discount, line_total, money, quote, shipping_cost
 
-pytestmark = pytest.mark.unit
 
 
 def test_money_arrondi_commercial():
     """0.125 s'arrondit à 0.13 (ROUND_HALF_UP), pas 0.12."""
     assert money("0.125") == Decimal("0.13")
 
+pytestmark = pytest.mark.unit
 
 def test_line_total_sans_remise():
     assert line_total(Decimal("12.50"), 2) == Decimal("25.00")

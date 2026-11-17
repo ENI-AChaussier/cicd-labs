@@ -11,4 +11,9 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install -r requirements-dev.txt
-      - run: pytest -m "unit or api"
+
+      - name: Vérification Ruff
+        run: ruff check .  --output-format=github
+
+      - name: Tests unitaires et API
+        run: pytest -m "unit or api"
