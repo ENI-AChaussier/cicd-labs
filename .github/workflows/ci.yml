@@ -33,4 +33,28 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-dev.txt
       - run: pip install -r requirements-dev.txt
-      - run: pytest -n auto -m "unit or api"
+      - name: Create reports directory
+        run: mkdir -p reports
+
+      - name: Run tests with coverage
+        run: |
+          pytest -n auto -m "unit or api" \
+            --cov=minishop \
+            --cov-report=xml:reports/coverage.xml \
+            --cov-report=html \
+            --cov-fail-under=85 \
+            --junitxml=reports/junit.xml
+
+      - name: Add coverage to job summary
+        if: always()
+        run: |
+          coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-python-${{ matrix.python }}
+          path: |
+            reports/
+            htmlcov/
