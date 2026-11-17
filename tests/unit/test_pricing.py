@@ -51,6 +51,11 @@ def test_quantite_invalide(qty):
 # Cette variable est déclarée mais jamais utilisée.
 # Ruff doit détecter l'erreur F841.
 
-def test_erreur_style():
-    prix = 10  # Variable inutilisée
-    assert True
+
+# Test volontaire du linter Ruff pour vérifier que Ruff détecte une variable inutilisée (F841).
+# À réactiver pour tester l'échec du pipeline CI l'erreur F841.
+
+# def test_erreur_style():
+#     prix = 10  # Variable inutilisée
+#     assert True
+
