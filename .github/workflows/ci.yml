@@ -16,6 +16,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
 
       - name: Installer Ruff
         run: pip install ruff
@@ -27,15 +29,23 @@ jobs:
     needs: lint
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Installer Python
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
 
       - name: Installer les dépendances
         run: pip install -r requirements-dev.txt
 
-      - name: Lancer les tests
-        run: pytest -m "unit or api"
+      - name: Lancer les tests en parallèle
+        run: pytest -m "unit or api" -n auto
