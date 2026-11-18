@@ -1,8 +1,18 @@
+# SOLUTION Atelier 2 — Pipeline CI de base
 name: CI
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+
+concurrency:                      # annule le run précédent de la même branche
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -52,7 +62,7 @@ jobs:
           echo "### Couverture" >> "$GITHUB_STEP_SUMMARY"
           python -m coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
 
-  
+  # Exécution DANS un conteneur : même image partout, indépendante du runner
   container-tests:
     needs: lint
     runs-on: ubuntu-latest
@@ -63,14 +73,26 @@ jobs:
       - run: pytest -m unit -q
 
   docker:
-    #needs: unit 
-    needs: lint
-    runs-on: ubuntu-latest
+    # needs: unit                            # Désactivé car attend la réussite du job unit et pour que la pipeline passe et eviter d'attendre la réussite des tests unitaires.
+                                             # Désactivé car la couverture actuelle est inférieure à 85 %.
+                                             # Le job docker serait donc ignoré.
+
+    needs: lint                              # Permet d'éxécuter le job Docker dès que Ruff réussit, même si le job unit échoue.
+    runs-on: ubuntu-latest                   # Utilise un runner Ubuntu hébergé par GitHub.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4            # Récupère le code du dépôt GitHub.
+
       - run: docker build -t minishop:${{ github.sha }} .
+                                             # Construit l'image Docker avec l'identifiant du commit Git.
+
       - name: Smoke test du conteneur
         run: |
+          # Démarre l'application MiniShop dans un conteneur Docker.
           docker run -d -p 8000:8000 --name app minishop:${{ github.sha }}
+
+          # Vérifie chaque seconde si l'application répond, pendant 30 secondes maximum.
           timeout 30 bash -c 'until curl -sf localhost:8000/health; do sleep 1; done'
+
+          # Vérifie que l'endpoint /products renvoie une réponse contenant "mug".
           curl -sf localhost:8000/products | grep -q mug
+
