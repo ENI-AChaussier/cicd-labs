@@ -29,5 +29,25 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-dev.txt
       - run: pip install -r requirements-dev.txt
-      - run: pytest -m "unit or api" -n auto
-
+     
+      - name: Tests unitaires + API en parallèle (xdist)
+        run: >
+          pytest -m "unit or api" -n auto
+          --cov --cov-report=xml --cov-report=html --cov-fail-under=85
+          --junitxml=reports/junit-${{ matrix.python }}.xml
+      # Conserver les rapports générés par les tests    
+      - uses: actions/upload-artifact@v4
+        if: always()                                   # même si les tests échouent
+        with:
+          name: test-reports-${{ matrix.python }}     # un artefact par version de Python
+          #Fichiers des rapports JUnit des tests et HTML, XML de couverture
+          path: |
+            reports/
+            htmlcov/
+            coverage.xml
+       # Afficher le résumé de couverture dans GitHub Actions      
+      - name: Résumé dans la page du run
+        if: always() && matrix.python == '3.12'        # Uniquement pour Python 3.12
+        run: |
+          echo "### Couverture" >> "$GITHUB_STEP_SUMMARY"
+          python -m coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
