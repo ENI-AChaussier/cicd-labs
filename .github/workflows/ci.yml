@@ -40,14 +40,37 @@ jobs:
         if: always()                                   # même si les tests échouent
         with:
           name: test-reports-${{ matrix.python }}     # un artefact par version de Python
-          #Fichiers des rapports JUnit des tests et HTML, XML de couverture
+      #Fichiers des rapports JUnit des tests et HTML, XML de couverture
           path: |
             reports/
             htmlcov/
             coverage.xml
-       # Afficher le résumé de couverture dans GitHub Actions      
+      # Afficher le résumé de couverture dans GitHub Actions      
       - name: Résumé dans la page du run
         if: always() && matrix.python == '3.12'        # Uniquement pour Python 3.12
         run: |
           echo "### Couverture" >> "$GITHUB_STEP_SUMMARY"
           python -m coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
+
+  
+  container-tests:
+    needs: lint
+    runs-on: ubuntu-latest
+    container: python:3.12-slim
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -r requirements-dev.txt
+      - run: pytest -m unit -q
+
+  docker:
+    #needs: unit 
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t minishop:${{ github.sha }} .
+      - name: Smoke test du conteneur
+        run: |
+          docker run -d -p 8000:8000 --name app minishop:${{ github.sha }}
+          timeout 30 bash -c 'until curl -sf localhost:8000/health; do sleep 1; done'
+          curl -sf localhost:8000/products | grep -q mug
