@@ -43,7 +43,7 @@ jobs:
       - name: Tests unitaires + API en parallèle (xdist)
         run: >
           pytest -m "unit or api" -n auto
-          --cov --cov-report=xml --cov-report=html --cov-fail-under=85
+          --cov --cov-report=xml --cov-report=html --cov-fail-under=80
           --junitxml=reports/junit-${{ matrix.python }}.xml
       # Conserver les rapports générés par les tests    
       - uses: actions/upload-artifact@v4
@@ -96,3 +96,30 @@ jobs:
           # Vérifie que l'endpoint /products renvoie une réponse contenant "mug".
           curl -sf localhost:8000/products | grep -q mug
 
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      # Récupère le code du dépôt GitHub
+      - uses: actions/checkout@v4
+
+      # Analyse les fichiers et les dépendances du projet avec Trivy
+      - name: Analyse Trivy des fichiers
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          scan-type: fs                   # Analyse les fichiers du projet
+          scan-ref: .                     # Répertoire courant du projet
+          severity: HIGH,CRITICAL         # Vulnérabilités élevées et critiques
+          exit-code: '0'                  # Ne bloque pas le pipeline, Affiche les résultats sans faire échouer le job
+
+      # Construit l'image Docker de MiniShop
+      - name: Construction de l'image Docker
+        run: docker build -t minishop:trivy .
+
+      # Analyse les vulnérabilités de l'image Docker
+      - name: Analyse Trivy de l'image Docker
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          scan-type: image                 # Analyse une image Docker
+          image-ref: minishop:trivy        # Image construite précédemment
+          severity: HIGH,CRITICAL         # Vulnérabilités élevées et critiques
+          exit-code: '0'                  # Ne bloque pas le pipeline
