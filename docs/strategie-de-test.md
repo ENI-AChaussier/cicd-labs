@@ -19,9 +19,32 @@
 | nocturne | charge, ZAP complet | p95 < 300 ms, erreurs < 1 % |
 
 ## 3. Règles pour les tests générés par IA
-- Un test généré est **relu** avant fusion (marqueur `@pytest.mark.generated`).
-- Il doit échouer si on casse la règle qu'il prétend vérifier (vérifié par mutation).
-- Pas de secret ni de donnée client dans les prompts.
+
+### Relecture et responsabilité
+- Tout test généré doit être relu avant fusion par l'auteur de la proposition de modification.
+- Un test généré doit être marqué par `@pytest.mark.generated` ou appartenir à un fichier marqué `pytestmark = [pytest.mark.generated, pytest.mark.unit]`.
+- L'utilisation d'un LLM ne transfère aucune responsabilité à l'outil : l'auteur de la PR reste responsable des tests qu'il propose.
+- Le relecteur vérifie que chaque test correspond à une règle métier, utilise une donnée valide et contient une assertion pertinente.
+- Les tests trop permissifs, sans assert utile ou liés uniquement à une implémentation interne peuvent être corrigés ou supprimés.
+
+### Validation avant fusion
+- Le test doit compiler, passer sur le code original et échouer lorsqu'une règle métier qu'il vérifie est cassée.
+- Les montants financiers doivent être comparés avec `decimal.Decimal`, jamais avec des float.
+- Les exceptions attendues doivent être précises : type d'erreur, puis message si la règle le précise.
+- Les cas générés doivent être testés par mutation ; les mutants survivants doivent être analysés pour identifier les règles non protégées.
+- Les règles ajoutées uniquement par le modèle doivent être validées par l'équipe métier ou par la spécification avant conservation.
+- Toute divergence entre la spécification et le code doit être documentée avec `# DIVERGENCE SPEC/CODE : ...` puis décidée avant fusion.
+
+### Secrets et données sensibles
+- Les prompts ne doivent jamais contenir de mot de passe, jeton, clé API, secret d'environnement ou donnée client réelle.
+- Les produits, commandes, comptes et journaux envoyés au modèle doivent être fictifs ou anonymisés.
+- La spécification et le code source peuvent être envoyés à un fournisseur IA uniquement après vérification qu'ils ne contiennent aucune donnée confidentielle.
+
+### Traitement des résultats
+- Bug applicatif confirmé : corriger le code et conserver le test qui détecte la régression.
+- Hallucination du modèle : rejeter ou corriger le test et améliorer le prompt si nécessaire.
+- Divergence non tranchée : suspendre la fusion et demander une décision métier avant toute correction automatique.
+- Test trop large ou trop permissif : préciser les assertions, le type d'exception ou le message attendu.
 
 ## 4. Gestion des tests instables (flaky)
 - Détection : `ai_tools/test_history.py` (score ≥ 0,6).

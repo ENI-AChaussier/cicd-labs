@@ -88,14 +88,14 @@ def render_offline(scenarios: list[dict], spec_name: str) -> str:
 
 
 # --------------------------------------------------------------------------- LLM
-def render_llm(spec: str, source: str, spec_name: str) -> str:
-    system = PROMPT_FILE.read_text(encoding="utf-8")
+def render_llm(spec: str, source: str, spec_name: str, prompt_file: Path, temperature: float) -> str:
+    system = prompt_file.read_text(encoding="utf-8")
+    source_section = f"## Code source sous test\n\n```python\n{source}\n```" if source else ""
     user = (
-        f"## Spécification ({spec_name})\n\n{spec}\n\n"
-        f"## Code source sous test\n\n```python\n{source}\n```\n\n"
-        "Génère le fichier de tests complet."
+        f"## Spécification ({spec_name})\n\n{spec}\n\n{source_section}".rstrip()
+        + "\n\nGénère le fichier de tests complet."
     )
-    return extract_code(chat(system, user))
+    return extract_code(chat(system, user, temperature=temperature))
 
 
 # --------------------------------------------------------------------------- garde-fou
@@ -112,14 +112,30 @@ def main() -> int:
     ap.add_argument("--source", type=Path, default=Path("minishop/pricing.py"))
     ap.add_argument("--out", type=Path, default=Path("tests/generated/test_pricing_generated.py"))
     ap.add_argument("--no-run", action="store_true", help="ne pas exécuter les tests générés")
+    ap.add_argument("--no-source", action="store_true", help="ne pas envoyer le code source au LLM")
+    ap.add_argument("--prompt-file", type=Path, default=PROMPT_FILE, help="prompt système à utiliser")
+    ap.add_argument("--temperature", type=float, default=0.2, help="température du LLM (0.0 à 2.0)")
     args = ap.parse_args()
+
+    if not 0.0 <= args.temperature <= 2.0:
+        ap.error("--temperature doit être compris entre 0.0 et 2.0")
 
     spec = args.spec.read_text(encoding="utf-8")
     if is_offline():
         engine, code = "offline", render_offline(parse_feature(spec), args.spec.name)
     else:
         try:
-            engine, code = provider(), render_llm(spec, args.source.read_text(encoding="utf-8"), args.spec.name)
+            source = "" if args.no_source else args.source.read_text(encoding="utf-8")
+            engine, code = (
+                provider(),
+                render_llm(
+                    spec,
+                    source,
+                    args.spec.name,
+                    args.prompt_file,
+                    args.temperature,
+                ),
+            )
         except LLMError as exc:
             print(f"[!] LLM indisponible ({exc}) -> repli sur le moteur offline", file=sys.stderr)
             engine, code = "offline", render_offline(parse_feature(spec), args.spec.name)

@@ -1,0 +1,98 @@
+name: Atelier 04 - AI Tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  anthropic-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements-dev.txt
+
+      - name: Vérifier la connexion Anthropic
+        env:
+          LLM_PROVIDER: anthropic
+          LLM_MODEL: claude-haiku-5-5
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python ai_tools/llm.py
+
+  generate-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements-dev.txt
+
+      - name: Mesurer la couverture avant génération
+        run: |
+          mkdir -p reports
+          pytest tests/unit tests/api \
+            --cov=minishop \
+            --cov-report=term \
+            --cov-report=xml:reports/coverage-before.xml \
+            -q
+          coverage report --format=markdown > reports/coverage-before.md
+
+      - name: Générer les tests
+        continue-on-error: true
+        env:
+          LLM_PROVIDER: anthropic
+          LLM_MODEL: claude-haiku-5-5
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python ai_tools/generate_tests.py \
+            specs/pricing.feature \
+            --source minishop/pricing.py \
+            --out tests/generated/test_pricing_pr.py
+
+      - name: Mesurer la couverture après génération
+        continue-on-error: true
+        run: |
+          if [ -f tests/generated/test_pricing_pr.py ]; then
+            pytest tests/unit tests/api tests/generated/test_pricing_pr.py \
+              --cov=minishop \
+              --cov-report=term \
+              -q || true
+          fi
+          coverage report --format=markdown > reports/coverage-after.md
+
+      - name: Résumer la couverture avant/après
+        if: always()
+        run: |
+          echo "## Couverture avant/après génération" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Avant" >> "$GITHUB_STEP_SUMMARY"
+          cat reports/coverage-before.md >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Après" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f reports/coverage-after.md ]; then
+            cat reports/coverage-after.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Génération non disponible." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Publier les tests générés
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tests-generes
+          if-no-files-found: warn
+          path: tests/generated/

@@ -52,7 +52,17 @@ def ssim(x: np.ndarray, y: np.ndarray, win: int = 8) -> float:
     return float(s.mean())
 
 
-def compare(baseline: Path, current: Path, diff_out: Path | None = None, tolerance: int = 16) -> VisualResult:
+def ssim_rgb(a: np.ndarray, b: np.ndarray, win: int = 8) -> float:
+    scores = [ssim(a[..., c], b[..., c], win=win) for c in range(3)]
+    return float(np.mean(scores))
+
+
+def compare(
+    baseline: Path,
+    current: Path,
+    diff_out: Path | None = None,
+    tolerance: int = 16,
+) -> VisualResult:
     a = np.asarray(Image.open(baseline).convert("RGB"), dtype=np.float64)
     b = np.asarray(Image.open(current).convert("RGB"), dtype=np.float64)
     if a.shape != b.shape:
@@ -63,7 +73,7 @@ def compare(baseline: Path, current: Path, diff_out: Path | None = None, toleran
         out[changed] = [255, 0, 255]
         diff_out.parent.mkdir(parents=True, exist_ok=True)
         Image.fromarray(out).save(diff_out)
-    return VisualResult(float(changed.mean()), ssim(_gray(a), _gray(b)), False)
+    return VisualResult(float(changed.mean()), ssim_rgb(a, b), False)
 
 
 def main() -> int:

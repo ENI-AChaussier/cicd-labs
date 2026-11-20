@@ -27,7 +27,7 @@ FREE_SHIPPING_THRESHOLD = Decimal("50.00")
 BULK_QTY = 10
 BULK_RATE = Decimal("0.05")
 MAX_QTY = 99
-COUPONS = {"WELCOME10", "FIXED5", "FREESHIP"}
+COUPONS = {"WELCOME10", "FIXED5", "FREESHIP", "STUDENT15"}
 
 
 def money(value: Decimal | float | int | str) -> Decimal:
@@ -93,6 +93,8 @@ def coupon_discount(subtotal: Decimal, coupon: str | None) -> Decimal:
         return money(subtotal * Decimal("0.10"))
     if code == "FIXED5" and subtotal >= Decimal("30"):
         return Decimal("5.00")
+    if code == "STUDENT15":
+        return money(subtotal * Decimal("0.15"))
     return Decimal("0.00")
 
 
@@ -109,12 +111,20 @@ def shipping_cost(amount_after_discount: Decimal, coupon: str | None, empty: boo
 def quote(items: list[dict], coupon: str | None = None) -> Quote:
     """Calcule un devis pour une liste d'items {product_id, qty}."""
     q = Quote(coupon=coupon.strip().upper() if coupon else None)
+    has_bulk_line = any(item["qty"] >= BULK_QTY for item in items)
+
     for item in items:
         product = get_product(item["product_id"])  # KeyError si inconnu
         total = line_total(product.price, item["qty"])
         q.lines.append(Line(product.id, item["qty"], product.price, total))
+
     q.subtotal = money(sum((ln.total for ln in q.lines), Decimal("0")))
-    q.discount = coupon_discount(q.subtotal, coupon) if q.lines else Decimal("0.00")
+
+    if q.coupon == "STUDENT15" and has_bulk_line:
+        q.discount = Decimal("0.00")  # STU15 ne s'applique pas si remise volume
+    else:
+        q.discount = coupon_discount(q.subtotal, coupon) if q.lines else Decimal("0.00")
+
     after = q.subtotal - q.discount
     q.shipping = shipping_cost(after, coupon, empty=not q.lines)
     q.total = money(after + q.shipping)
